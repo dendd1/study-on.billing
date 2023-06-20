@@ -4,8 +4,11 @@ namespace App\Controller;
 
 use App\DTO\UserDTO;
 use App\Entity\User;
+use App\Repository\UserRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Doctrine\Persistence\ObjectManager;
+use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -78,6 +81,10 @@ class UserController extends AbstractController
      *          property="token",
      *          type="string",
      *        ),
+     *        @OA\Property(
+     *          property="refresh_token",
+     *          type="string",
+     *        ),
      *     )
      * )
      * @OA\Response(
@@ -137,6 +144,10 @@ class UserController extends AbstractController
      *          type="string",
      *        ),
      *        @OA\Property(
+     *          property="refresh_token",
+     *          type="string",
+     *        ),
+     *        @OA\Property(
      *          property="roles",
      *          type="array",
      *          @OA\Items(
@@ -161,8 +172,13 @@ class UserController extends AbstractController
      * )
      * @OA\Tag(name="User")
      */
-    public function register(Request $request): JsonResponse
-    {
+    public function register(
+        Request $request,
+        UserRepository $repo,
+        JWTTokenManagerInterface $jwtManager,
+        RefreshTokenGeneratorInterface $refreshTokenGenerator,
+        RefreshTokenManagerInterface $refreshTokenManager
+    ): JsonResponse {
 
         $DTO_user = $this->serializer->deserialize($request->getContent(), UserDTO::class, 'json');
         $errors = $this->validator->validate($DTO_user);
@@ -185,8 +201,15 @@ class UserController extends AbstractController
 
         $this->entityManager->getRepository(User::class)->add($user, true);
 
+        $refreshToken = $refreshTokenGenerator->createForUserWithTtl(
+            $user,
+            (new \DateTime())->modify('+1 month')->getTimestamp()
+        );
+        $refreshTokenManager->save($refreshToken);
+
         return new JsonResponse([
             'token' => $this->jwtManager->create($user),
+            'refresh_token' => $refreshToken->getRefreshToken(),
             'roles' => $user->getRoles(),
         ], Response::HTTP_CREATED);
     }
@@ -243,11 +266,79 @@ class UserController extends AbstractController
     public function getCurrentUser(Request $request): JsonResponse
     {
         $decodedJwtToken = $this->jwtManager->decode($this->tokenStorageInterface->getToken());
-        $user = $this->entityManager->getRepository(User::class)->findOneByEmail($decodedJwtToken['username']);
+        $user = $this->entityManager->getRepository(User::class)->findOneByEmail($decodedJwtToken['email']);
         return new JsonResponse([
             'username' => $user->getEmail(),
             'roles' => $user->getRoles(),
             'balance' => $user->getBalance(),
         ], Response::HTTP_OK);
+    }
+
+    /**
+     * @Route("/api/v1/token/refresh", name="api_refresh_token", methods={"POST"})
+     * @OA\Post(
+     *     path="/api/v1/token/refresh",
+     *     summary="Обновление истекших токенов",
+     *     description="Обновление истекших токенов"
+     * )
+     * @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *        @OA\Property(
+     *          property="refresh_token",
+     *          type="string",
+     *          description="refresh токен пользователя",
+     *          example="refresh_token",
+     *        ),
+     *     )
+     *)
+     * @OA\Response(
+     *     response=200,
+     *     description="Обновление истекших токенов",
+     *     @OA\JsonContent(
+     *        @OA\Property(
+     *          property="token",
+     *          type="string",
+     *        ),
+     *        @OA\Property(
+     *          property="refresh_token",
+     *          type="string",
+     *        ),
+     *     )
+     * )
+     * @OA\Response(
+     *     response=401,
+     *     description="Ошибка аутентификации",
+     *     @OA\JsonContent(
+     *        @OA\Property(
+     *          property="code",
+     *          type="string",
+     *          example="401"
+     *        ),
+     *        @OA\Property(
+     *          property="message",
+     *          type="string",
+     *          example="Invalid credentials."
+     *        ),
+     *     )
+     * )
+     * @OA\Response(
+     *     response="default",
+     *     description="Неизвестная ошибка",
+     *     @OA\JsonContent(
+     *        @OA\Property(
+     *          property="code",
+     *          type="string"
+     *        ),
+     *        @OA\Property(
+     *          property="message",
+     *          type="string"
+     *        ),
+     *     )
+     * )
+     * @OA\Tag(name="User")
+     */
+    public function refresh()
+    {
     }
 }

@@ -3,8 +3,11 @@
 namespace App\Tests;
 
 use App\Entity\User;
+use App\Service\PaymentService;
 use App\Tests\AbstractTest;
 use App\DataFixtures\AppFixtures;
+use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -19,7 +22,10 @@ class UserControllerTest extends AbstractTest
     protected function getFixtures(): array
     {
         return [new AppFixtures(
-            self::getContainer()->get(UserPasswordHasherInterface::class),
+            $this->getContainer()->get(UserPasswordHasherInterface::class),
+            $this->getContainer()->get(RefreshTokenGeneratorInterface::class),
+            $this->getContainer()->get(RefreshTokenManagerInterface::class),
+            $this->getContainer()->get(PaymentService::class),
         )];
     }
     public function testAuthSuccess()
