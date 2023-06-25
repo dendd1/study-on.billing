@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\DTO\UserDTO;
 use App\Entity\User;
 use App\Repository\UserRepository;
+use App\Service\PaymentService;
 use Doctrine\Persistence\ManagerRegistry;
 use Doctrine\Persistence\ObjectManager;
 use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
@@ -177,7 +178,8 @@ class UserController extends AbstractController
         UserRepository $repo,
         JWTTokenManagerInterface $jwtManager,
         RefreshTokenGeneratorInterface $refreshTokenGenerator,
-        RefreshTokenManagerInterface $refreshTokenManager
+        RefreshTokenManagerInterface $refreshTokenManager,
+        PaymentService $paymentService
     ): JsonResponse {
 
         $DTO_user = $this->serializer->deserialize($request->getContent(), UserDTO::class, 'json');
@@ -201,6 +203,8 @@ class UserController extends AbstractController
 
         $this->entityManager->getRepository(User::class)->add($user, true);
 
+        // TODO Подтягивание начального депозита из конфигуарционного фала
+        $paymentService->deposit($user, 100);
         $refreshToken = $refreshTokenGenerator->createForUserWithTtl(
             $user,
             (new \DateTime())->modify('+1 month')->getTimestamp()
