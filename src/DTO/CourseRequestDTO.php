@@ -8,6 +8,8 @@ use JMS\Serializer\Annotation as Serializer;
 
 class CourseRequestDTO
 {
+    public string $name;
+
     public string $code;
 
     public ?float $price = null;

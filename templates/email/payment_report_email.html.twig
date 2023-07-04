@@ -1,0 +1,69 @@
+{% extends 'email.html.twig' %}
+
+
+{% block title %}
+    <p class="title">Отчет об оплаченных курсах за период
+        <span style="color: #0d5aa7">
+            {{ period.from|date('d.m.Y') }} - {{ period.to|date('d.m.Y') }}
+        </span>
+    </p>
+{% endblock %}
+
+{% block body %}
+    <style>
+        .title{
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .header-tag {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .text-tag {
+            font-size: 18px;
+            color: grey;
+            font-weight: bold;
+        }
+    </style>
+    <table width="100%" class="table table-light table__report_info">
+        <thead>
+        <tr align="justify" >
+            <th>
+               <p class="header-tag">Название курса</p>
+            </th>
+            <th>
+                <p class="header-tag">Тип курса</p>
+            </th>
+            <th>
+                <p class="header-tag">Число аренд/покупок</p>
+            </th>
+            <th>
+                <p class="header-tag">Общая сумма</p>
+            </th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for course in courses %}
+            <tr>
+                <td>
+                    <p class="text-tag">{{ course.name }}</p>
+                </td>
+                <td>
+                    <p class="text-tag">{{ course.type }}</p>
+                </td>
+                <td>
+                    <p class="text-tag">{{ course.transactions_count }}</p>
+                </td>
+                <td>
+                    <p class="text-tag">{{ course.common_price }}₽</p>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td class="header-tag" colspan="6">Нет информации об оплате курсов</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p class="header-tag">Итого: {{ total_paid }}₽</p>
+{% endblock %}

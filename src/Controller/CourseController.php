@@ -2,8 +2,10 @@
 
 namespace App\Controller;
 
+use App\DTO\CourseRequestDTO;
 use App\DTO\CourseResponseDTO;
 use App\DTO\PaymentResponseDTO;
+use App\Entity\Course;
 use App\Enum\CourseEnum;
 use App\Repository\CourseRepository;
 use App\Service\PaymentService;
@@ -11,14 +13,17 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ObjectManager;
 use JMS\Serializer\Serializer;
 use JMS\Serializer\SerializerBuilder;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use Nelmio\ApiDocBundle\Annotation\Security;
 use OpenApi\Annotations as OA;
 use PHP_CodeSniffer\Tokenizers\JS;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 class CourseController extends AbstractController
 {
@@ -64,6 +69,228 @@ class CourseController extends AbstractController
         return new JsonResponse($response, Response::HTTP_OK);
     }
 
+    /**
+     * @Route("/api/v1/courses/new", name="api_new_course", methods={"POST"})
+     * @OA\Post(
+     *     path="/api/v1/courses/new",
+     *     summary="Create new course",
+     *     description="Create new course"
+     * )
+     * @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *        @OA\Property(
+     *          property="name",
+     *          type="string",
+     *          description="name course",
+     *          example="new name test course",
+     *        ),
+     *        @OA\Property(
+     *          property="type",
+     *          type="smallint",
+     *          description="type course",
+     *          example="1",
+     *        ),
+     *        @OA\Property(
+     *          property="price",
+     *          type="float",
+     *          description="price course",
+     *          example="100",
+     *        ),
+     *        @OA\Property(
+     *          property="code",
+     *          type="string",
+     *          description="code course",
+     *          example="test-code-1",
+     *        ),
+     *     )
+     *  )
+     * @OA\Response(
+     *      response=200,
+     *      description="Succeded create",
+     *      @OA\JsonContent(
+     *          schema="CoursesInfo",
+     *          type="object",
+     *          @OA\Property(property="success", type="boolean"),
+     *      )
+     * ),
+     * @OA\Response(
+     *      response=401,
+     *      description="UNAUTHORIZED",
+     *      @OA\JsonContent(
+     *          type="object",
+     *          @OA\Property(property="error", type="string")
+     *      )
+     * ),
+     * @OA\Response(
+     *      response=400,
+     *      description="Name cannot be empty",
+     *      @OA\JsonContent(
+     *          type="object",
+     *          @OA\Property(property="error", type="string")
+     *      )
+     * ),
+     * @OA\Response(
+     *      response=403,
+     *      description="Course must have the price",
+     *      @OA\JsonContent(
+     *          type="object",
+     *          @OA\Property(property="error", type="string")
+     *      )
+     * ),
+     * @OA\Response(
+     *      response=409,
+     *      description="Course with this code is alredy exist",
+     *      @OA\JsonContent(
+     *          type="object",
+     *          @OA\Property(property="error", type="string")
+     *      )
+     * )
+     * @OA\Tag(name="Course")
+     * @Security(name="Bearer")
+     */
+    public function new(
+        Request $request,
+        JWTTokenManagerInterface $jwtManager,
+        TokenStorageInterface $tokenStorageInterface,
+        CourseRepository $courseRepository
+    ) {
+
+        if (!$tokenStorageInterface->getToken()) {
+            return new JsonResponse(['errors' => 'Нет токена'], Response::HTTP_UNAUTHORIZED);
+        }
+        if (!$this->getUser() || !in_array('ROLE_SUPER_ADMIN', $this->getUser()->getRoles(), true)) {
+            return new JsonResponse(['errors' => 'Отказ в доступе'], Response::HTTP_UNAUTHORIZED);
+        }
+        $course = $this->serializer->deserialize($request->getContent(), CourseRequestDTO::class, 'json');
+        if ($course->getName() == null) {
+            return new JsonResponse(['errors' => 'Название не может быть пустым'], Response::HTTP_BAD_REQUEST);
+        }
+        if ($course->getType() == CourseEnum::FREE) {
+            $course->setPrice(null);
+        } else {
+            if ($course->getPrice() == null) {
+                return new JsonResponse(['errors' => 'Курс платный, укажите цену'], Response::HTTP_FORBIDDEN);
+            }
+        }
+        if ($courseRepository->count(['code' => $course->getCode()]) > 0) {
+            return new JsonResponse(['errors' => 'Курс с таким кодом уже существует'], Response::HTTP_CONFLICT);
+        }
+        $courseRepository->add(Course::fromDTO($course), true);
+        return new JsonResponse(['success' => true], Response::HTTP_CREATED);
+    }
+
+    /**
+     * @Route("/api/v1/courses/{code}/edit", name="api_edit_course", methods={"POST"})
+     * @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *        @OA\Property(
+     *          property="name",
+     *          type="string",
+     *          description="name course",
+     *          example="new name of editing test course",
+     *        ),
+     *        @OA\Property(
+     *          property="type",
+     *          type="smallint",
+     *          description="type course",
+     *          example="1",
+     *        ),
+     *        @OA\Property(
+     *          property="price",
+     *          type="float",
+     *          description="price course",
+     *          example="100",
+     *        ),
+     *        @OA\Property(
+     *          property="code",
+     *          type="string",
+     *          description="code course",
+     *          example="test-edit-code-1",
+     *        ),
+     *     )
+     *  )
+     * @OA\Post(
+     *     path="/api/v1/courses/{code}/edit",
+     *     summary="Edit course",
+     *     description="Edit course"
+     * )
+     * @OA\Response(
+     *      response=200,
+     *      description="Succeded pay info",
+     *      @OA\JsonContent(
+     *          schema="PayInfo",
+     *          type="object",
+     *          @OA\Property(property="success", type="boolean"),
+     *      )
+     * ),
+     * @OA\Response(
+     *      response=401,
+     *      description="UNAUTHORIZED",
+     *      @OA\JsonContent(
+     *          type="object",
+     *          @OA\Property(property="error", type="string")
+     *      )
+     * ),
+     * @OA\Response(
+     *      response=404,
+     *      description="Course with that code not found",
+     *      @OA\JsonContent(
+     *          type="object",
+     *          @OA\Property(property="error", type="string")
+     *      )
+     * ),
+     * @OA\Response(
+     *      response=406,
+     *      description="Not enough funds",
+     *      @OA\JsonContent(
+     *          type="object",
+     *          @OA\Property(property="error", type="string")
+     *      )
+     * ),
+     * @OA\Response(
+     *      response=409,
+     *      description="User has already paid for this course",
+     *      @OA\JsonContent(
+     *          type="object",
+     *          @OA\Property(property="error", type="string")
+     *      )
+     * )
+     * @OA\Tag(name="Course")
+     * @Security(name="Bearer")
+     */
+    public function edit(
+        string $code,
+        Request $request,
+        JWTTokenManagerInterface $jwtManager,
+        TokenStorageInterface $tokenStorageInterface,
+        CourseRepository $courseRepository
+    ) {
+        if (!$tokenStorageInterface->getToken() || !in_array('ROLE_SUPER_ADMIN', $this->getUser()->getRoles(), true)) {
+            return new JsonResponse(['errors' => 'Нет токена'], Response::HTTP_UNAUTHORIZED);
+        }
+        if (!$this->getUser()) {
+            return new JsonResponse(['errors' => 'Пользователь не авторизован'], Response::HTTP_UNAUTHORIZED);
+        }
+        $course = $this->serializer->deserialize($request->getContent(), CourseRequestDTO::class, 'json');
+        if ($course->getName() == null) {
+            return new JsonResponse(['errors' => 'Название не может быть пустым'], Response::HTTP_BAD_REQUEST);
+        }
+        if ($course->getType() == CourseEnum::FREE) {
+            $course->setPrice(null);
+        } else {
+            if ($course->getPrice() == null) {
+                return new JsonResponse(['errors' => 'Курс платный, укажите цену'], Response::HTTP_FORBIDDEN);
+            }
+        }
+        $edited_course = $courseRepository->findOneBy(['code' => $code]);
+        if ($edited_course == null) {
+            return new JsonResponse(['errors' => 'Курс с таким кодом не существует'], Response::HTTP_CONFLICT);
+        }
+        $courseRepository->add($edited_course->fromDTOedit($course), true);
+        return new JsonResponse(['success' => true], Response::HTTP_OK);
+    }
     /**
      * @Route("/api/v1/courses/{code}", name="api_course", methods={"GET"})
      * @OA\Get(

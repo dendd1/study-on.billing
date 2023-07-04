@@ -41,7 +41,7 @@ class CourseControllerTest extends AbstractTest
         $courses = json_decode($client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         $this->assertResponseOk();
 
-        $this->assertCount(5, $courses);
+        $this->assertCount(3, $courses);
     }
 
     public function testGetCourse(): void
@@ -94,8 +94,7 @@ class CourseControllerTest extends AbstractTest
             '/api/v1/courses/' . $pay_course->getCode() . '/pay',
             [],
             [],
-            ['HTTP_Authorization' => 'Bearer ' . $userInfo['token']],
-            ''
+            ['HTTP_Authorization' => 'Bearer ' . $userInfo['token']]
         );
         $this->assertResponseCode(Response::HTTP_OK);
         $payInfo = json_decode($client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
@@ -112,7 +111,7 @@ class CourseControllerTest extends AbstractTest
         ]);
 
         // Недостаточно средств
-        $client->request('POST', '/api/v1/courses/test_buy/pay');
+        $client->request('POST', '/api/v1/courses/cleanCourse-1/pay');
         $this->assertResponseCode(Response::HTTP_UNAUTHORIZED);
 
         // Оплата не нужна

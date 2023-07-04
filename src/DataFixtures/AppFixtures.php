@@ -43,7 +43,7 @@ class AppFixtures extends Fixture
         $manager->persist($new_user);
 
         $refreshToken = $this->refreshTokenGenerator
-            ->createForUserWithTtl($new_user, (new \DateTime())->modify('+1 month')->getTimestamp());
+            ->createForUserWithTtl($new_user, time());
         $this->refreshTokenManager->save($refreshToken);
 
         $new_user = new User();
@@ -88,6 +88,7 @@ class AppFixtures extends Fixture
         foreach (self::COURSES_DATA as $courseData) {
             $course = (new Course())
                 ->setCode($courseData['code'])
+                ->setName($courseData['name'])
                 ->setType($courseData['type']);
             if (isset($courseData['price'])) {
                 $course->setPrice($courseData['price']);
@@ -102,31 +103,22 @@ class AppFixtures extends Fixture
     private const COURSES_DATA = [
         [
             'code' => 'car-1',
+            'name' => 'Сборник советов для начинающих водителей',
             'type' => 0 // free
         ],
         [
             'code' => 'cooking-1',
+            'name' => 'Уроки приготовления пищи для новичков',
             'type' => 1,
             // rent
             'price' => 20
         ],
         [
             'code' => 'cleanCourse-1',
+            'name' => 'Уборка дома для начинающих',
             'type' => 2,
             // buy
             'price' => 30
-        ],
-        [
-            'code' => 'test_buy',
-            'type' => 2,
-            // buy
-            'price' => 40
-        ],
-        [
-            'code' => 'test_rent',
-            'type' => 1,
-            // rent
-            'price' => 10
         ],
     ];
 }

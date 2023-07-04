@@ -1,0 +1,32 @@
+{% extends 'email.html.twig' %}
+
+{% block title %}
+    <p class="title">Уважаемый клиент! Информируем вас об будущем окончании аренды.</p>
+{% endblock %}
+
+{% block body %}
+    <style>
+        .title{
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .text-tag {
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+    {% for course in courses %}
+        <p class="text-tag">
+            Курс
+            <span style="color: red;">
+                "{{ course.name }}"
+            </span>
+
+            действует до
+            <span style="color: red;">
+                {{ course.expires|date('d.m.Y H:i') }}
+            </span>
+
+        </p>
+    {% endfor %}
+{% endblock %}

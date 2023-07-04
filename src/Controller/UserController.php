@@ -202,9 +202,8 @@ class UserController extends AbstractController
         );
 
         $this->entityManager->getRepository(User::class)->add($user, true);
-
-        // TODO Подтягивание начального депозита из конфигуарционного фала
         $paymentService->deposit($user, 100);
+
         $refreshToken = $refreshTokenGenerator->createForUserWithTtl(
             $user,
             (new \DateTime())->modify('+1 month')->getTimestamp()

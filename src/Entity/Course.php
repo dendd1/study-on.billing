@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\DTO\CourseRequestDTO;
 use App\Repository\CourseRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -38,6 +39,11 @@ class Course
      * @ORM\OneToMany(targetEntity=Transaction::class, mappedBy="course")
      */
     private $transactions;
+
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
+    private $name;
 
     public function __construct()
     {
@@ -112,6 +118,36 @@ class Course
             }
         }
 
+        return $this;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $name): self
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    public static function fromDTO(CourseRequestDTO $course)
+    {
+        return (new self())
+            ->setName($course->getName())
+            ->setCode($course->getCode())
+            ->setType($course->getType())
+            ->setPrice($course->getPrice());
+    }
+
+    public function fromDTOedit(CourseRequestDTO $course)
+    {
+        $this->setName($course->getName());
+        $this->setCode($course->getCode());
+        $this->setType($course->getType());
+        $this->setPrice($course->getPrice());
         return $this;
     }
 }

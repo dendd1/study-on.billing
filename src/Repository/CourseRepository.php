@@ -38,6 +38,20 @@ class CourseRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+    public function findExpired(string $period): array
+    {
+        $now = new \DateTime();
+        $new=(new \DateTime())->add(new \DateInterval($period));
+        return $this->createQueryBuilder('c')
+            ->select('u.email AS email', 'c.name AS name', 't.expires AS expires')
+            ->innerJoin('c.transactions', 't')
+            ->innerJoin('t.customer', 'u')
+            ->where('t.expires >= :now and t.expires <= :expires_time')
+            ->setParameter('now', $now)
+            ->setParameter('expires_time', $new)
+            ->getQuery()
+            ->getArrayResult();
+    }
 
 //    /**
 //     * @return Course[] Returns an array of Course objects
