@@ -157,24 +157,24 @@ class CourseController extends AbstractController
     ) {
 
         if (!$tokenStorageInterface->getToken()) {
-            return new JsonResponse(['errors' => 'Нет токена'], Response::HTTP_UNAUTHORIZED);
+            return new JsonResponse(['message' => 'Нет токена'], Response::HTTP_UNAUTHORIZED);
         }
         if (!$this->getUser() || !in_array('ROLE_SUPER_ADMIN', $this->getUser()->getRoles(), true)) {
-            return new JsonResponse(['errors' => 'Отказ в доступе'], Response::HTTP_UNAUTHORIZED);
+            return new JsonResponse(['message' => 'Отказ в доступе'], Response::HTTP_UNAUTHORIZED);
         }
         $course = $this->serializer->deserialize($request->getContent(), CourseRequestDTO::class, 'json');
         if ($course->getName() == null) {
-            return new JsonResponse(['errors' => 'Название не может быть пустым'], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(['message' => 'Название не может быть пустым'], Response::HTTP_BAD_REQUEST);
         }
         if ($course->getType() == CourseEnum::FREE) {
             $course->setPrice(null);
         } else {
             if ($course->getPrice() == null) {
-                return new JsonResponse(['errors' => 'Курс платный, укажите цену'], Response::HTTP_FORBIDDEN);
+                return new JsonResponse(['message' => 'Курс платный, укажите цену'], Response::HTTP_FORBIDDEN);
             }
         }
         if ($courseRepository->count(['code' => $course->getCode()]) > 0) {
-            return new JsonResponse(['errors' => 'Курс с таким кодом уже существует'], Response::HTTP_CONFLICT);
+            return new JsonResponse(['message' => 'Курс с таким кодом уже существует'], Response::HTTP_CONFLICT);
         }
         $courseRepository->add(Course::fromDTO($course), true);
         return new JsonResponse(['success' => true], Response::HTTP_CREATED);
@@ -268,25 +268,25 @@ class CourseController extends AbstractController
         CourseRepository $courseRepository
     ) {
         if (!$tokenStorageInterface->getToken() || !in_array('ROLE_SUPER_ADMIN', $this->getUser()->getRoles(), true)) {
-            return new JsonResponse(['errors' => 'Нет токена'], Response::HTTP_UNAUTHORIZED);
+            return new JsonResponse(['message' => 'Нет токена'], Response::HTTP_UNAUTHORIZED);
         }
         if (!$this->getUser()) {
-            return new JsonResponse(['errors' => 'Пользователь не авторизован'], Response::HTTP_UNAUTHORIZED);
+            return new JsonResponse(['message' => 'Пользователь не авторизован'], Response::HTTP_UNAUTHORIZED);
         }
         $course = $this->serializer->deserialize($request->getContent(), CourseRequestDTO::class, 'json');
         if ($course->getName() == null) {
-            return new JsonResponse(['errors' => 'Название не может быть пустым'], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(['message' => 'Название не может быть пустым'], Response::HTTP_BAD_REQUEST);
         }
         if ($course->getType() == CourseEnum::FREE) {
             $course->setPrice(null);
         } else {
             if ($course->getPrice() == null) {
-                return new JsonResponse(['errors' => 'Курс платный, укажите цену'], Response::HTTP_FORBIDDEN);
+                return new JsonResponse(['message' => 'Курс платный, укажите цену'], Response::HTTP_FORBIDDEN);
             }
         }
         $edited_course = $courseRepository->findOneBy(['code' => $code]);
         if ($edited_course == null) {
-            return new JsonResponse(['errors' => 'Курс с таким кодом не существует'], Response::HTTP_CONFLICT);
+            return new JsonResponse(['message' => 'Курс с таким кодом не существует'], Response::HTTP_CONFLICT);
         }
         $courseRepository->add($edited_course->fromDTOedit($course), true);
         return new JsonResponse(['success' => true], Response::HTTP_OK);
@@ -330,7 +330,7 @@ class CourseController extends AbstractController
     {
         $course = $courseRepository->findOneBy(['code' => $code]);
         if (!$course) {
-            return new JsonResponse(['errors' => "Курс $code не найден"], Response::HTTP_NOT_FOUND);
+            return new JsonResponse(['message' => "Курс $code не найден"], Response::HTTP_NOT_FOUND);
         }
         $course = new CourseResponseDTO($course);
         return new JsonResponse($course, Response::HTTP_OK);
@@ -399,7 +399,10 @@ class CourseController extends AbstractController
     {
         $course = $courseRepository->findOneBy(['code' => htmlspecialchars($code)]);
         if (!$course) {
-            return new JsonResponse(['success' => false, 'errors' => "Курс $code не найден"], Response::HTTP_NOT_FOUND);
+            return new JsonResponse(
+                ['success' => false, 'message' => "Курс $code не найден"],
+                Response::HTTP_NOT_FOUND
+            );
         }
         if ($course->getType() === CourseEnum::FREE) {
             $response = new PaymentResponseDTO(true, $course->getType(), null);
@@ -408,7 +411,7 @@ class CourseController extends AbstractController
         $user = $this->getUser();
         if (!$user) {
             return new JsonResponse(
-                ['success' => false, 'errors' => 'Пользователь не авторизован'],
+                ['success' => false, 'message' => 'Пользователь не авторизован'],
                 Response::HTTP_UNAUTHORIZED
             );
         }
@@ -419,11 +422,14 @@ class CourseController extends AbstractController
             return new JsonResponse($response, Response::HTTP_OK);
         } catch (\RuntimeException $exeption) {
             return new JsonResponse(
-                ['success' => false, 'errors' => $exeption->getMessage()],
+                ['success' => false, 'message' => $exeption->getMessage()],
                 Response::HTTP_NOT_ACCEPTABLE
             );
         } catch (\LogicException $exeption) {
-            return new JsonResponse(['success' => false, 'errors' => $exeption->getMessage()], Response::HTTP_CONFLICT);
+            return new JsonResponse(
+                ['success' => false, 'message' => $exeption->getMessage()],
+                Response::HTTP_CONFLICT
+            );
         }
     }
 

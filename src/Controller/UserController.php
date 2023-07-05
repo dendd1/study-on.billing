@@ -11,6 +11,7 @@ use Doctrine\Persistence\ObjectManager;
 use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
 use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -106,8 +107,9 @@ class UserController extends AbstractController
      * )
      * @OA\Tag(name="User")
      **/
-    public function auth(): JsonResponse
+    public function auth(LoggerInterface $logger): JsonResponse
     {
+        $logger->info('I just got the logger');
         return $this->json([]);
     }
 
@@ -189,10 +191,10 @@ class UserController extends AbstractController
             foreach ($errors as $error) {
                 $errors_array[] = $error->getMessage();
             }
-            return new JsonResponse(['errors' => $errors_array], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(['message' => implode(', ', $errors_array)], Response::HTTP_BAD_REQUEST);
         }
         if ($this->entityManager->getRepository(User::class)->findOneByEmail($DTO_user->getUsername())) {
-            return new JsonResponse(['errors' => ['This email already exists']], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(['message' => 'This email already exists'], Response::HTTP_BAD_REQUEST);
         }
 
         $user = User::getFromDTO($DTO_user);

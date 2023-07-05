@@ -120,7 +120,7 @@ class UserControllerTest extends AbstractTest
         $this->assertResponseCode(Response::HTTP_BAD_REQUEST);
         $response = $client->getResponse();
         $responseData = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        $this->assertEquals("Email field is required", $responseData['errors'][0]);
+        $this->assertEquals("Email field is required", $responseData['message']);
     }
     public function testRegisterEmptyPassword()
     {
@@ -133,7 +133,10 @@ class UserControllerTest extends AbstractTest
         $this->assertResponseCode(Response::HTTP_BAD_REQUEST);
         $response = $client->getResponse();
         $responseData = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        $this->assertEquals("Password field is required", $responseData['errors'][0]);
+        $this->assertEquals(
+            "Password field is required, The password must contain at least 6 characters",
+            $responseData['message']
+        );
     }
     public function testRegisterInvalidPassword()
     {
@@ -146,7 +149,7 @@ class UserControllerTest extends AbstractTest
         $this->assertResponseCode(Response::HTTP_BAD_REQUEST);
         $response = $client->getResponse();
         $responseData = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        $this->assertEquals("The password must contain at least 6 characters", $responseData['errors'][0]);
+        $this->assertEquals("The password must contain at least 6 characters", $responseData['message']);
     }
     public function testRegisterInvalidUsername()
     {
@@ -159,7 +162,7 @@ class UserControllerTest extends AbstractTest
         $this->assertResponseCode(Response::HTTP_BAD_REQUEST);
         $response = $client->getResponse();
         $responseData = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        $this->assertEquals("Wrong Email", $responseData['errors'][0]);
+        $this->assertEquals("Wrong Email", $responseData['message']);
     }
     public function testRegisterBusyUsername()
     {
@@ -171,7 +174,7 @@ class UserControllerTest extends AbstractTest
         $this->assertResponseCode(Response::HTTP_BAD_REQUEST);
         $response = $client->getResponse();
         $responseData = json_decode($response->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        $this->assertEquals("This email already exists", $responseData['errors'][0]);
+        $this->assertEquals("This email already exists", $responseData['message']);
     }
     public function testGetCurrentUserSuccess()
     {

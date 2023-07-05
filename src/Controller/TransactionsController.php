@@ -81,7 +81,7 @@ class TransactionsController extends AbstractController
     ): JsonResponse {
         $token = $tokenStorageInterface->getToken();
         if (null === $token) {
-            return new JsonResponse(['errors' => 'Нет токена'], Response::HTTP_UNAUTHORIZED);
+            return new JsonResponse(['message' => 'Нет токена'], Response::HTTP_UNAUTHORIZED);
         }
         $decodedJwtToken = $jwtManager->decode($token);
         $type = $request->query->get('type') ? TransactionEnum::TYPE_CODES[$request->query->get('type')] : null;
